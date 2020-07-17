@@ -1,0 +1,166 @@
+<ns0:test-suite xmlns:ns0="urn:model.allure.qatools.yandex.ru" start="1587974758340" stop="1587974760574">
+  <name>test_jiekou</name>
+  <labels/>
+  <test-cases>
+    <test-case start="1587974758340" status="failed" stop="1587974760574">
+      <name>Test_Post.test_data1</name>
+      <failure>
+        <message>ConnectionError: HTTPConnectionPool(host='localhost', port=8888): Max retries exceeded with url: /myJson (Caused by NewConnectionError('&lt;requests.packages.urllib3.connection.HTTPConnection object at 0x03B43430&gt;: Failed to establish a new connection: [Errno 10061] ',))</message>
+        <stack-trace>self = &lt;test_jiekou.Test_Post instance at 0x03B1C968&gt;
+
+    def test_data1(self):
+        td=Post()
+&gt;       response= td.test()
+
+test_jiekou.py:20: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+test1.py:18: in test
+    response = requests.post(url, header, body)
+E:\python\lib\site-packages\requests\api.py:112: in post
+    return request('post', url, data=data, json=json, **kwargs)
+E:\python\lib\site-packages\requests\api.py:58: in request
+    return session.request(method=method, url=url, **kwargs)
+E:\python\lib\site-packages\requests\sessions.py:518: in request
+    resp = self.send(prep, **send_kwargs)
+E:\python\lib\site-packages\requests\sessions.py:639: in send
+    r = adapter.send(request, **kwargs)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+self = &lt;requests.adapters.HTTPAdapter object at 0x03B43AD0&gt;
+request = &lt;PreparedRequest [POST]&gt;, stream = False
+timeout = &lt;requests.packages.urllib3.util.timeout.Timeout object at 0x02123090&gt;
+verify = True, cert = None, proxies = OrderedDict()
+
+    def send(self, request, stream=False, timeout=None, verify=True, cert=None, proxies=None):
+        """Sends PreparedRequest object. Returns Response object.
+    
+        :param request: The :class:`PreparedRequest &lt;PreparedRequest&gt;` being sent.
+        :param stream: (optional) Whether to stream the request content.
+        :param timeout: (optional) How long to wait for the server to send
+            data before giving up, as a float, or a :ref:`(connect timeout,
+            read timeout) &lt;timeouts&gt;` tuple.
+        :type timeout: float or tuple or urllib3 Timeout object
+        :param verify: (optional) Either a boolean, in which case it controls whether
+            we verify the server's TLS certificate, or a string, in which case it
+            must be a path to a CA bundle to use
+        :param cert: (optional) Any user-provided SSL certificate to be trusted.
+        :param proxies: (optional) The proxies dictionary to apply to the request.
+        :rtype: requests.Response
+        """
+    
+        conn = self.get_connection(request.url, proxies)
+    
+        self.cert_verify(conn, request.url, verify, cert)
+        url = self.request_url(request, proxies)
+        self.add_headers(request)
+    
+        chunked = not (request.body is None or 'Content-Length' in request.headers)
+    
+        if isinstance(timeout, tuple):
+            try:
+                connect, read = timeout
+                timeout = TimeoutSauce(connect=connect, read=read)
+            except ValueError as e:
+                # this may raise a string formatting error.
+                err = ("Invalid timeout {0}. Pass a (connect, read) "
+                       "timeout tuple, or a single float to set "
+                       "both timeouts to the same value".format(timeout))
+                raise ValueError(err)
+        elif isinstance(timeout, TimeoutSauce):
+            pass
+        else:
+            timeout = TimeoutSauce(connect=timeout, read=timeout)
+    
+        try:
+            if not chunked:
+                resp = conn.urlopen(
+                    method=request.method,
+                    url=url,
+                    body=request.body,
+                    headers=request.headers,
+                    redirect=False,
+                    assert_same_host=False,
+                    preload_content=False,
+                    decode_content=False,
+                    retries=self.max_retries,
+                    timeout=timeout
+                )
+    
+            # Send the request.
+            else:
+                if hasattr(conn, 'proxy_pool'):
+                    conn = conn.proxy_pool
+    
+                low_conn = conn._get_conn(timeout=DEFAULT_POOL_TIMEOUT)
+    
+                try:
+                    low_conn.putrequest(request.method,
+                                        url,
+                                        skip_accept_encoding=True)
+    
+                    for header, value in request.headers.items():
+                        low_conn.putheader(header, value)
+    
+                    low_conn.endheaders()
+    
+                    for i in request.body:
+                        low_conn.send(hex(len(i))[2:].encode('utf-8'))
+                        low_conn.send(b'\r\n')
+                        low_conn.send(i)
+                        low_conn.send(b'\r\n')
+                    low_conn.send(b'0\r\n\r\n')
+    
+                    # Receive the response from the server
+                    try:
+                        # For Python 2.7+ versions, use buffering of HTTP
+                        # responses
+                        r = low_conn.getresponse(buffering=True)
+                    except TypeError:
+                        # For compatibility with Python 2.6 versions and back
+                        r = low_conn.getresponse()
+    
+                    resp = HTTPResponse.from_httplib(
+                        r,
+                        pool=conn,
+                        connection=low_conn,
+                        preload_content=False,
+                        decode_content=False
+                    )
+                except:
+                    # If we hit any problems here, clean up the connection.
+                    # Then, reraise so that we can handle the actual exception.
+                    low_conn.close()
+                    raise
+    
+        except (ProtocolError, socket.error) as err:
+            raise ConnectionError(err, request=request)
+    
+        except MaxRetryError as e:
+            if isinstance(e.reason, ConnectTimeoutError):
+                # TODO: Remove this in 3.0.0: see #2811
+                if not isinstance(e.reason, NewConnectionError):
+                    raise ConnectTimeout(e, request=request)
+    
+            if isinstance(e.reason, ResponseError):
+                raise RetryError(e, request=request)
+    
+            if isinstance(e.reason, _ProxyError):
+                raise ProxyError(e, request=request)
+    
+&gt;           raise ConnectionError(e, request=request)
+E           ConnectionError: HTTPConnectionPool(host='localhost', port=8888): Max retries exceeded with url: /myJson (Caused by NewConnectionError('&lt;requests.packages.urllib3.connection.HTTPConnection object at 0x03B43430&gt;: Failed to establish a new connection: [Errno 10061] ',))
+
+E:\python\lib\site-packages\requests\adapters.py:502: ConnectionError</stack-trace>
+      </failure>
+      <attachments/>
+      <labels>
+        <label name="severity" value="normal"/>
+        <label name="thread" value="10640-MainThread"/>
+        <label name="host" value="755d023116"/>
+        <label name="framework" value="pytest"/>
+        <label name="language" value="cpython2"/>
+      </labels>
+      <steps/>
+    </test-case>
+  </test-cases>
+</ns0:test-suite>
