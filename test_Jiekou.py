@@ -16,7 +16,7 @@ class Test_Post():
 
         self.od.del_data()
 
-    @pytest.mark.skip(reason="不执行")
+    #@pytest.mark.skip(reason="不执行")
     def test_data1(self):
 
         response= self.td.test()
